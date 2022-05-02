@@ -70,6 +70,8 @@ ch.js"></script>
 
       const socket = Edrys.role === "station" ? io.connect("/pty") : null;
       const status = document.getElementById("status");
+      var connected = false
+      var lastData = null
 
       if (Edrys.role === "station") {
         socket.on("pty-output", function (data) {
@@ -77,6 +79,7 @@ ch.js"></script>
           term.write(data.output);
 
           Edrys.sendMessage("pty-output", data.output)
+          lastData = data.output
         });
 
         socket.on("connect", () => {
@@ -85,6 +88,7 @@ ch.js"></script>
             '<span style="background-color: lightgreen;">connected</span>';
 
           Edrys.sendMessage("connect", "true")
+          connected = true
         });
 
         socket.on("disconnect", () => {
@@ -92,6 +96,7 @@ ch.js"></script>
             '<span style="background-color: #ff8383;">disconnected</span>';
 
           Edrys.sendMessage("connect", "false")
+          connected = false
         });
 
         Edrys.onMessage(({
@@ -106,6 +111,12 @@ ch.js"></script>
               socket.emit("pty-input", {
                 input: body
               });
+              break
+            }
+
+            case "join": {
+              Edrys.sendMessage("connect", JSON.stringify(connected))
+              Edrys.sendMessage("pty-output", lastData)
               break
             }
 
@@ -137,6 +148,8 @@ ch.js"></script>
                 status.innerHTML =
                   '<span style="background-color: #ff8383;">disconnected</span>';
               }
+
+              fitToscreen()
             }
           }
         });
@@ -148,8 +161,6 @@ ch.js"></script>
           cols: term.cols,
           rows: term.rows
         };
-
-        console.warn("asdasfdafs", dims)
 
         console.log("sending new dimensions to server's pty", dims);
         if (socket) {
@@ -175,10 +186,11 @@ ch.js"></script>
     Edrys.onReady(() => {
       console.log("Module is loaded!")
 
-      console.warn(Edrys.role);
-      console.warn(Edrys)
-
       init()
+
+      if (Edrys.role !== "station") {
+        Edrys.sendMessage("join", null)
+      }
     });
   </script>
 </body>
