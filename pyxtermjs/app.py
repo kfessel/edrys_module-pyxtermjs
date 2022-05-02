@@ -13,6 +13,8 @@ import fcntl
 import shlex
 import logging
 import sys
+import tempfile
+
 
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
@@ -77,10 +79,15 @@ def connect():
     # create child process attached to a pty we can read from and write to
     (child_pid, fd) = pty.fork()
     if child_pid == 0:
-        # this is the child process fork.
-        # anything printed here will show up in the pty, including the output
-        # of this subprocess
-        subprocess.run(app.config["cmd"])
+
+        if (app.config["useTmp"]):
+            app.config["tmp"] = tempfile.mkdtemp()
+            # this is the child process fork.
+            # anything printed here will show up in the pty, including the output
+            # of this subprocess
+            subprocess.run(app.config["cmd"], cwd=app.config["tmp"])
+        else:
+            subprocess.run(app.config["cmd"])
     else:
         # this is the parent process fork.
         # store child fd and pid
@@ -125,11 +132,18 @@ def main():
         default="",
         help="arguments to pass to command (i.e. --cmd-args='arg1 arg2 --flag')",
     )
+    parser.add_argument(
+        "--tmp",
+        default="False",
+        help="use a temporary folder as base, which comes handy when using firejail",
+    )
     args = parser.parse_args()
     if args.version:
         print(__version__)
         exit(0)
     app.config["cmd"] = [args.command] + shlex.split(args.cmd_args)
+
+    app.config["useTmp"] = args.tmp
 
     if args.cors:
         CORS(app)
