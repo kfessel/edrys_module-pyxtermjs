@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 from flask import Flask, render_template
+from flask_cors import CORS
 from flask_socketio import SocketIO
 import pty
 import os
@@ -21,6 +22,7 @@ app = Flask(__name__, template_folder=".", static_folder=".", static_url_path=""
 app.config["SECRET_KEY"] = "secret!"
 app.config["fd"] = None
 app.config["child_pid"] = None
+
 socketio = SocketIO(app)
 
 
@@ -107,6 +109,7 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("-p", "--port", default=5000, help="port to run server on")
+    parser.add_argument("--cors", default=False, help="enable CORS by default this is disabled")
     parser.add_argument(
         "--host",
         default="127.0.0.1",
@@ -127,6 +130,10 @@ def main():
         print(__version__)
         exit(0)
     app.config["cmd"] = [args.command] + shlex.split(args.cmd_args)
+
+    if args.cors:
+        CORS(app)
+
     green = "\033[92m"
     end = "\033[0m"
     log_format = green + "pyxtermjs > " + end + "%(levelname)s (%(funcName)s:%(lineno)s) %(message)s"
