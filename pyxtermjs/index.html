@@ -20,9 +20,23 @@
 <body>
   <span style="font-size: 1.4em">pyxterm.js</span>&nbsp;&nbsp;&nbsp;
   <span style="font-size: small">status:
-    <span style="font-size: small" id="status">connecting...</span></span>
+    <span style="font-size: small" id="status">connecting...</span>
+  </span>
 
-  <div style="width: 100%; height: 90%" id="terminal"></div>
+  <span style="font-size: small; float: inline-end; padding-top: 0.4rem; display: none;" id="control">
+    <label>
+      student: <input type="checkbox" onclick="toggle('student')">
+    </label>
+
+    <label>
+      teacher: <input type="checkbox" onclick="toggle('teacher')">
+    </label>
+  </span>
+
+  <div style="width: 100%; height: 80%" id="terminal"></div>
+
+
+
 
   <p style="text-align: right; font-size: small">
     built by <a href="https://chadsmith.dev">Chad Smith</a>
@@ -37,7 +51,29 @@ ch.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 
   <script>
+    var teacher = false
+    var student = false
+
+    function toggle(role) {
+      switch (role) {
+        case "teacher": {
+          teacher = !teacher
+          break
+        }
+        case "student": {
+          student = !student
+          break
+        }
+      }
+    }
+
     function init() {
+
+      // display control only to station
+      if (Edrys.role === "station") {
+        document.getElementById("control").style.display = "inline-block"
+      }
+
       const term = new Terminal({
         cursorBlink: true,
         macOptionIsMeta: true,
@@ -64,7 +100,8 @@ ch.js"></script>
             input: data
           });
         } else {
-          Edrys.sendMessage("input", data)
+          // send inputData from subRoles
+          Edrys.sendMessage("input_" + Edrys.role, data)
         }
       });
 
@@ -107,10 +144,21 @@ ch.js"></script>
           console.log("Got new message: ", from, subject, body)
 
           switch (subject) {
-            case "input": {
-              socket.emit("pty-input", {
-                input: body
-              });
+            case "input_teacher": {
+              if (teacher) {
+                socket.emit("pty-input", {
+                  input: body
+                });
+              }
+              break
+            }
+
+            case "input_student": {
+              if (student) {
+                socket.emit("pty-input", {
+                  input: body
+                });
+              }
               break
             }
 
