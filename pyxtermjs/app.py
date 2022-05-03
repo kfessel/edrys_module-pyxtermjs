@@ -25,7 +25,7 @@ app.config["SECRET_KEY"] = "secret!"
 app.config["fd"] = None
 app.config["child_pid"] = None
 
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 
 def set_winsize(fd, row, col, xpix=0, ypix=0):
@@ -117,6 +117,14 @@ def main():
     )
     parser.add_argument("-p", "--port", default=5000, help="port to run server on")
     parser.add_argument("--cors", default=False, help="enable CORS by default this is disabled")
+
+    parser.add_argument(
+        "--cors_allowed_origins",
+        default="",
+        help="specify the origin for socket.io, to enable all set it to *",
+    )
+    
+
     parser.add_argument(
         "--host",
         default="127.0.0.1",
@@ -137,6 +145,7 @@ def main():
         default="False",
         help="use a temporary folder as base, which comes handy when using firejail",
     )
+
     args = parser.parse_args()
     if args.version:
         print(__version__)
@@ -157,6 +166,7 @@ def main():
         level=logging.DEBUG if args.debug else logging.INFO,
     )
     logging.info(f"serving on http://{args.host}:{args.port}")
+
     socketio.run(app, debug=args.debug, port=args.port, host=args.host)
 
 
