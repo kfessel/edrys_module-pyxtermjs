@@ -119,13 +119,6 @@ def main():
     parser.add_argument("--cors", default=False, help="enable CORS by default this is disabled")
 
     parser.add_argument(
-        "--cors_allowed_origins",
-        default="",
-        help="specify the origin for socket.io, to enable all set it to *",
-    )
-    
-
-    parser.add_argument(
         "--host",
         default="127.0.0.1",
         help="host to run server on (use 0.0.0.0 to allow access from other hosts)",
