@@ -117,7 +117,7 @@ ch.js"></script>
         }
       });
 
-      const socket = Edrys.role === "station" ? io.connect(Edrys.module.stationConfig.server || "/pty") : null;
+      const socket = Edrys.role === "station" ? io.connect(Edrys.module.stationConfig.server || "http://localhost:5000/pty") : null;
       const status = document.getElementById("status");
       var connected = false
       var lastData = null
