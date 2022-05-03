@@ -33,10 +33,9 @@
     </label>
   </span>
 
-  <div style="width: 100%; height: 80%" id="terminal"></div>
+  <textarea id="execute" style="display: none">echo $CODE | base64 --decode</textarea>
 
-
-
+  <div style="width: calc(100% + 10px); height: 80%" id="terminal"></div>
 
   <p style="text-align: right; font-size: small">
     built by <a href="https://chadsmith.dev">Chad Smith</a>
@@ -53,6 +52,7 @@ ch.js"></script>
   <script>
     var teacher = false
     var student = false
+    var editor = false
 
     function toggle(role) {
       switch (role) {
@@ -67,11 +67,23 @@ ch.js"></script>
       }
     }
 
+    function execute(code) {
+      let program = document.getElementById("execute").value
+
+      if(!program.endsWith("\n")){
+        program += "\n"
+      }
+
+      Edrys.sendMessage("input_" + Edrys.role, program.replace('$CODE', btoa(code))  )
+    }
+
     function init() {
 
       // display control only to station
       if (Edrys.role === "station") {
         document.getElementById("control").style.display = "inline-block"
+
+        document.getElementById("execute").style.display = "inline-block"
       }
 
       const term = new Terminal({
@@ -105,7 +117,7 @@ ch.js"></script>
         }
       });
 
-      const socket = Edrys.role === "station" ? io.connect("/pty") : null;
+      const socket = Edrys.role === "station" ? io.connect(Edrys.module.stationConfig.server || "/pty") : null;
       const status = document.getElementById("status");
       var connected = false
       var lastData = null
@@ -141,7 +153,7 @@ ch.js"></script>
           subject,
           body
         }) => {
-          console.log("Got new message: ", from, subject, body)
+          // console.log("Got new message: ", from, subject, body)
 
           switch (subject) {
             case "input_teacher": {
@@ -162,25 +174,42 @@ ch.js"></script>
               break
             }
 
+            case "input_station": {
+              socket.emit("pty-input", {
+                input: body
+              });
+
+              break
+            }
+
             case "join": {
               Edrys.sendMessage("connect", JSON.stringify(connected))
               Edrys.sendMessage("pty-output", lastData)
               break
             }
-
-            default: {
-              console.warn("unknown command: ", from, subject, body)
-            }
           }
         });
 
+        Edrys.onMessage(
+          ({
+            from,
+            subject,
+            body,
+            module
+          }) => {
+            // console.log("Got new message: ", from, subject, body, module,  Edrys.module.stationConfig.execute)
+
+            if (subject === Edrys.module.stationConfig.execute) {
+              execute(body)
+            }
+          }, promiscuous = true);
       } else {
         Edrys.onMessage(({
           from,
           subject,
           body
         }) => {
-          console.log("Got new message: ", from, subject, body)
+          // console.log("Got new message: ", from, subject, body)
 
           switch (subject) {
             case "pty-output": {
