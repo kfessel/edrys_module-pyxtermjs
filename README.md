@@ -30,7 +30,7 @@ You may optionally specify any of the following station-only settings:
 
 ``` json
 { "server": "http://localhost:5000/pty"
-, "execute": "pty-execute" }
+, "execute": "pty-execute"
 }
 ```
 
