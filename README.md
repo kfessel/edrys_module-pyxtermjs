@@ -10,7 +10,7 @@ It is based on [pyxterm.js](https://github.com/cs01/pyxtermjs) by Chad Smith.
 To use this URL to add the module to your class:
 
 ```bash
-https://cross-lab-project.github.io/pyxtermjs
+https://cross-lab-project.github.io/edrys_module_pyxtermjs
 ```
 
 additionally you will have to clone this project and start the [pyxterm.js](https://github.com/cs01/pyxtermjs) terminal server:
