@@ -61,3 +61,29 @@ optional arguments:
   --cmd-args CMD_ARGS   arguments to pass to command (i.e. --cmd-args='arg1 arg2 --flag') (default: )
   --tmp TMP             use a temporary folder as base, which comes handy when using firejail (default: False)
 ```
+
+## Docker
+
+To enable an even more secure usage, you can also start and or modify the included Dockerfile.
+
+Build it via:
+
+``` bash
+$ docker build . -t arduino
+```
+
+And run it via:
+
+``` bash
+docker run -it -p 5000:5000 arduino
+```
+
+If you want to let the user flash or work with Arduinos, as we want, you can use the following option:
+
+```
+chmod a+rw /dev/ttyACM0
+docker run -it -p 5000:5000 --device=/dev/ttyACM0 arduino
+
+```
+
+We have defined a user with reduced root access, that is why we have to allow others to read and write on `/dev/ttyACM0` before the internal user can flash the device.
