@@ -29,7 +29,8 @@ RUN groupadd -g ${gid} ${group}
 RUN useradd -u ${uid} -g ${group} -s /bin/sh -m ${user} # <--- the '-m' create a user home directory
 RUN usermod -a -G dialout ${user}
 
-# Switch to user
-USER ${uid}:${gid}
+# Switch to user we must not set group to make the configuration done above apply
+# !! if ${user} is not setup correctly the next line might result in group being root !!
+USER ${user}
 
 ENTRYPOINT python3 -m pyxtermjs --cors True --tmp True --host 0.0.0.0
