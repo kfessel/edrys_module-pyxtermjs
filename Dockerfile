@@ -71,10 +71,13 @@ RUN groupadd -g ${gid} ${group}
 RUN useradd -u ${uid} -g ${group} -s /bin/sh -m ${user} # <--- the '-m' create a user home directory
 RUN usermod -a -G dialout ${user}
 
+COPY ./assets/.zshrc /home/appuser/.zshrc
+COPY ./assets/.oh-my-zsh /home/appuser/.oh-my-zsh
+
 # Switch to user we must not set group to make the configuration done above apply
 # !! if ${user} is not setup correctly the next line might result in group being root !!
 USER ${user}
 
 EXPOSE 5000
 
-ENTRYPOINT python3 -m pyxtermjs --cors True --tmp True --host 0.0.0.0
+ENTRYPOINT python3 -m pyxtermjs --cors True --host 0.0.0.0 --command zsh

@@ -14,229 +14,67 @@
   <link rel="stylesheet" href="https://edrys-org.github.io/edrys/module/vendor/water.min.css" />
   <link rel="stylesheet" href="https://edrys-org.github.io/edrys/module/vendor/open-iconic/css/open-iconic.min.css" />
   <script src="https://edrys-org.github.io/edrys/module/edrys.js"></script>
+  <script src="https://unpkg.com/vue@3"></script>
 
 </head>
 
 <body>
-  <span style="font-size: 1.4em">pyxterm.js</span>&nbsp;&nbsp;&nbsp;
-  <span style="font-size: small">status:
-    <span style="font-size: small" id="status">connecting...</span>
-  </span>
+  <div id="app">
+    <span style="font-size: 1.4em">pyxterm.js</span>
+    <span style="font-size: small; margin-left: 2rem;">
+      status:
+      <span v-if="status == -1" style="background-color: #ff8383;">disconnected</span>
+      <span v-if="status ==  0">connecting ...</span>
+      <span v-if="status ==  1" style="background-color: lightgreen;">connected</span>
+    </span>
 
-  <span style="font-size: small; float: inline-end; padding-top: 0.4rem; display: none;" id="control">
-    <label>
-      student: <input type="checkbox" onclick="toggle('student')">
-    </label>
+    <span style="font-size: small; display: flex; align-items: center; float: right;" v-if="isStation">
+      <label>
+        student: <input type="checkbox" :value="enable.student" @click="toggleStudent">
+      </label>
+      <label>
+        teacher: <input type="checkbox" :value="enable.teacher" @click="toggleTeacher">
+      </label>
+      <input type="input" style="display: inline-flex;" :value="server">
+      <button style="display: inline-flex;" @click="reload()">reload</button>
+    </span>
 
-    <label>
-      teacher: <input type="checkbox" onclick="toggle('teacher')">
-    </label>
-  </span>
+    <textarea style="height: 4.25rem;" v-model="execute">{{execute}}</textarea>
+  </div>
 
-  <textarea id="execute" style="display: none">echo $CODE | base64 --decode</textarea>
-
-  <div style="width: calc(100% + 10px); height: 80%" id="terminal"></div>
+  <div style="width: calc(100% + 10px); height: 60%" id="terminal"></div>
 
   <p style="text-align: right; font-size: small">
     built by <a href="https://chadsmith.dev">Chad Smith</a>
     <a href="https://github.com/cs01">GitHub</a>
   </p>
+
   <!-- xterm -->
   <script src="https://unpkg.com/xterm@4.11.0/lib/xterm.js"></script>
   <script src="https://unpkg.com/xterm-addon-fit@0.5.0/lib/xterm-addon-fit.js"></script>
   <script src="https://unpkg.com/xterm-addon-web-links@0.4.0/lib/xterm-addon-web-links.js"></script>
-  <script src="https://unpkg.com/xterm-addon-search@0.8.0/lib/xterm-addon-sear
-ch.js"></script>
+  <script src="https://unpkg.com/xterm-addon-search@0.8.0/lib/xterm-addon-search.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 
   <script>
-    var teacher = false
-    var student = false
-    var editor = false
+    const {
+      createApp
+    } = Vue
 
-    function toggle(role) {
-      switch (role) {
-        case "teacher": {
-          teacher = !teacher
-          break
-        }
-        case "student": {
-          student = !student
-          break
-        }
-      }
-    }
+    var terminal = null
+    var fit = null
+    var socket = null
+    var lastData = null
 
-    function execute(code) {
-      let program = document.getElementById("execute").value
+    const DEFAULT_SERVER = 'http://localhost:5000/pty'
 
-      if(!program.endsWith("\n")){
-        program += "\n"
-      }
 
-      Edrys.sendMessage("input_" + Edrys.role, program.replace('$CODE', btoa(code))  )
-    }
-
-    function init() {
-
-      // display control only to station
-      if (Edrys.role === "station") {
-        document.getElementById("control").style.display = "inline-block"
-
-        document.getElementById("execute").style.display = "inline-block"
-      }
-
-      const term = new Terminal({
-        cursorBlink: true,
-        macOptionIsMeta: true,
-        scrollback: true,
-      });
-
-      // https://github.com/xtermjs/xterm.js/issues/2941
-      const fit = new FitAddon.FitAddon();
-      term.loadAddon(fit);
-      term.loadAddon(new WebLinksAddon.WebLinksAddon());
-      term.loadAddon(new SearchAddon.SearchAddon());
-
-      term.open(document.getElementById("terminal"));
-      fit.fit();
-      term.resize(12, 50);
-      console.log(`size: ${term.cols} columns, ${term.rows} rows`);
-      fit.fit();
-      term.writeln("Welcome to pyxterm.js!");
-      term.writeln("https://github.com/cs01/pyxterm.js");
-      term.onData((data) => {
-        console.log("key pressed in browser:", data);
-        if (socket) {
-          socket.emit("pty-input", {
-            input: data
-          });
-        } else {
-          // send inputData from subRoles
-          Edrys.sendMessage("input_" + Edrys.role, data)
-        }
-      });
-
-      const socket = Edrys.role === "station" ? io.connect(Edrys.module.stationConfig.server || "http://localhost:5000/pty") : null;
-      const status = document.getElementById("status");
-      var connected = false
-      var lastData = null
-
-      if (Edrys.role === "station") {
-        socket.on("pty-output", function (data) {
-          console.log("new output received from server:", data.output);
-          term.write(data.output);
-
-          Edrys.sendMessage("pty-output", data.output)
-          lastData = data.output
-        });
-
-        socket.on("connect", () => {
-          fitToscreen();
-          status.innerHTML =
-            '<span style="background-color: lightgreen;">connected</span>';
-
-          Edrys.sendMessage("connect", "true")
-          connected = true
-        });
-
-        socket.on("disconnect", () => {
-          status.innerHTML =
-            '<span style="background-color: #ff8383;">disconnected</span>';
-
-          Edrys.sendMessage("connect", "false")
-          connected = false
-        });
-
-        Edrys.onMessage(({
-          from,
-          subject,
-          body
-        }) => {
-          // console.log("Got new message: ", from, subject, body)
-
-          switch (subject) {
-            case "input_teacher": {
-              if (teacher) {
-                socket.emit("pty-input", {
-                  input: body
-                });
-              }
-              break
-            }
-
-            case "input_student": {
-              if (student) {
-                socket.emit("pty-input", {
-                  input: body
-                });
-              }
-              break
-            }
-
-            case "input_station": {
-              socket.emit("pty-input", {
-                input: body
-              });
-
-              break
-            }
-
-            case "join": {
-              Edrys.sendMessage("connect", JSON.stringify(connected))
-              Edrys.sendMessage("pty-output", lastData)
-              break
-            }
-          }
-        });
-
-        Edrys.onMessage(
-          ({
-            from,
-            subject,
-            body,
-            module
-          }) => {
-            // console.log("Got new message: ", from, subject, body, module,  Edrys.module.stationConfig.execute)
-
-            if (subject === Edrys.module.stationConfig.execute) {
-              execute(body)
-            }
-          }, promiscuous = true);
-      } else {
-        Edrys.onMessage(({
-          from,
-          subject,
-          body
-        }) => {
-          // console.log("Got new message: ", from, subject, body)
-
-          switch (subject) {
-            case "pty-output": {
-              term.write(body);
-              break
-            }
-
-            case "connect": {
-              if (body === "true") {
-                status.innerHTML =
-                  '<span style="background-color: lightgreen;">connected</span>';
-              } else {
-                status.innerHTML =
-                  '<span style="background-color: #ff8383;">disconnected</span>';
-              }
-
-              fitToscreen()
-            }
-          }
-        });
-      }
-
-      function fitToscreen() {
+    function fitToScreen() {
+      if (fit && terminal) {
         fit.fit();
         const dims = {
-          cols: term.cols,
-          rows: term.rows
+          cols: terminal.cols,
+          rows: terminal.rows
         };
 
         console.log("sending new dimensions to server's pty", dims);
@@ -244,31 +82,216 @@ ch.js"></script>
           socket.emit("resize", dims);
         }
       }
-
-      function debounce(func, wait_ms) {
-        let timeout;
-        return function (...args) {
-          const context = this;
-          clearTimeout(timeout);
-          timeout = setTimeout(() => func.apply(context, args), wait_ms);
-        };
-      }
-
-      const wait_ms = 50;
-      window.onresize = debounce(fitToscreen, wait_ms);
     }
 
+    function debounce(func, wait_ms) {
+      let timeout;
+      return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait_ms);
+      };
+    }
 
+    const app = createApp({
+      data() {
+        return {
+          status: 0,
+          isStation: false,
+          connected: false,
+          enable: {
+            student: false,
+            teacher: false
+          },
+          server: DEFAULT_SERVER,
+          execute: 'echo $CODE | base64 --decode',
+        }
+      },
+      methods: {
+        toggleStudent() {
+          this.enable.student = !this.enable.student
+        },
+
+        toggleTeacher() {
+          this.enable.teacher = !this.enable.teacher
+        },
+
+        reload() {
+          alert("reconnect")
+        },
+
+        initTerminal() {
+          terminal = new Terminal({
+            cursorBlink: true,
+            macOptionIsMeta: true,
+            scrollback: true,
+          });
+
+          // https://github.com/xtermjs/xterm.js/issues/2941
+          fit = new FitAddon.FitAddon();
+          terminal.loadAddon(fit);
+          terminal.loadAddon(new WebLinksAddon.WebLinksAddon());
+          terminal.loadAddon(new SearchAddon.SearchAddon());
+
+          terminal.open(document.getElementById("terminal"));
+          fit.fit();
+          terminal.resize(12, 50);
+          console.log(`size: ${terminal.cols} columns, ${terminal.rows} rows`);
+          fit.fit();
+          terminal.writeln("Welcome to pyxterm.js!");
+          terminal.writeln("https://github.com/cs01/pyxterm.js");
+
+          terminal.onData((data) => {
+            console.log("key pressed in browser:", data);
+            if (socket) {
+              socket.emit("pty-input", {
+                input: data
+              });
+            } else if (Edrys.module) {
+              // send inputData from subRoles
+              Edrys.sendMessage("input_" + Edrys.role, data)
+            }
+          });
+
+
+          const wait_ms = 50;
+          window.onresize = debounce(fitToScreen, wait_ms);
+        },
+
+        connectUser() {
+          Edrys.onMessage(({
+            from,
+            subject,
+            body
+          }) => {
+            // console.log("Got new message: ", from, subject, body)
+            switch (subject) {
+              case "pty-output": {
+                terminal.write(body);
+                break
+              }
+              case "connect": {
+                if (body === "1") {
+                  self.status = 1
+                } else {
+                  self.status = -1
+                }
+                fitToScreen()
+                break
+              }
+              default: {
+                console.warn("unknown message (user) => ", from, subject, body)
+              }
+            }
+          });
+        },
+
+        connectStation() {
+          socket = io.connect(this.server);
+          const self = this
+
+          socket.on("pty-output", function (data) {
+            console.log("new output received from server:", data.output);
+            terminal.write(data.output);
+            if (Edrys.module)
+              Edrys.sendMessage("pty-output", data.output)
+            lastData = data.output
+          });
+
+          socket.on("connect", () => {
+            fitToScreen();
+            self.status = 1
+            if (Edrys.module)
+              Edrys.sendMessage("connect", "true")
+          });
+
+          socket.on("disconnect", () => {
+            self.status = -1
+            if (Edrys.module)
+              Edrys.sendMessage("connect", "false")
+          });
+
+          if (Edrys.module) {
+            Edrys.onMessage(({
+              from,
+              subject,
+              body
+            }) => {
+              // console.log("Got new message: ", from, subject, body)
+              switch (subject) {
+                case "input_teacher": {
+                  if (self.enable.teacher) {
+                    socket.emit("pty-input", {
+                      input: body
+                    })
+                  }
+                  break
+                }
+                case "input_student": {
+                  if (self.enable.student) {
+                    socket.emit("pty-input", {
+                      input: body
+                    })
+                  }
+                  break
+                }
+                case "input_station": {
+                  socket.emit("pty-input", {
+                    input: body
+                  })
+                  break
+                }
+                case "join": {
+                  Edrys.sendMessage("connect", JSON.stringify(self.status))
+                  Edrys.sendMessage("pty-output", lastData)
+                  break
+                }
+                default: {
+                  console.warn("unknown message (station) => ", from, subject, body)
+                }
+              }
+            });
+
+            Edrys.onMessage(
+              ({
+                from,
+                subject,
+                body,
+                module
+              }) => {
+                // console.log("Got new message: ", from, subject, body, module,  Edrys.module.stationConfig.execute)
+
+                if (subject === Edrys.module.stationConfig.execute) {
+                  self.execute(body)
+                }
+              }, promiscuous = true);
+          }
+        }
+      }
+    }).mount("#app")
+
+    app.initTerminal()
 
     Edrys.onReady(() => {
       console.log("Module is loaded!")
 
-      init()
-
-      if (Edrys.role !== "station") {
+      if (Edrys.role === "station") {
+        app.isStation = true
+        app.server = Edrys.module.stationConfig.server || DEFAULT_SERVER
+        app.connectStation()
         Edrys.sendMessage("join", null)
+      } else {
+        app.connectUser()
       }
     });
+
+    setTimeout(function() {
+      if (!Edrys.module) {
+        console.warn("connect")
+        app.connectStation()
+        app.isStation = true
+      }
+    }, 5000)
   </script>
 </body>
 

@@ -79,15 +79,15 @@ def connect():
     # create child process attached to a pty we can read from and write to
     (child_pid, fd) = pty.fork()
     if child_pid == 0:
-
-        if (app.config["useTmp"]):
-            app.config["tmp"] = tempfile.mkdtemp()
-            # this is the child process fork.
-            # anything printed here will show up in the pty, including the output
-            # of this subprocess
-            subprocess.run(app.config["cmd"], cwd=app.config["tmp"])
-        else:
-            subprocess.run(app.config["cmd"])
+        while True:
+            if (app.config["useTmp"]):
+                app.config["tmp"] = tempfile.mkdtemp()
+                # this is the child process fork.
+                # anything printed here will show up in the pty, including the output
+                # of this subprocess
+                subprocess.run(app.config["cmd"], cwd=app.config["tmp"])
+            else:
+                subprocess.run(app.config["cmd"])
     else:
         # this is the parent process fork.
         # store child fd and pid
@@ -143,11 +143,12 @@ def main():
     if args.version:
         print(__version__)
         exit(0)
-    app.config["cmd"] = [args.command] + shlex.split(args.cmd_args)
+    app.config["cmd"] = [args.command or os.environ.get(
+        "PYXTERM_CMD")] + shlex.split(args.cmd_args or os.environ.get("PYXTERM_CMD_ARGS"))
 
-    app.config["useTmp"] = args.tmp
+    app.config["useTmp"] = args.tmp or os.environ.get("PYXTERM_USE_TMP")
 
-    if args.cors:
+    if args.cors or os.environ.get("PYXTERM_CORS"):
         CORS(app)
 
     green = "\033[92m"
@@ -156,11 +157,14 @@ def main():
     logging.basicConfig(
         format=log_format,
         stream=sys.stdout,
-        level=logging.DEBUG if args.debug else logging.INFO,
+        level=logging.DEBUG if args.debug or os.environ.get("PYXTERM_DEBUG") else logging.INFO,
     )
     logging.info(f"serving on http://{args.host}:{args.port}")
 
-    socketio.run(app, debug=args.debug, port=args.port, host=args.host)
+    socketio.run(app,
+                 debug=args.debug or os.environ.get("PYXTERM_DEBUG"),
+                 port=args.port or os.environ.get("PYXTERM_PORT"),
+                 host=args.host or os.environ.get("PYXTERM_HOST"))
 
 
 if __name__ == "__main__":
