@@ -39,7 +39,7 @@
       <button style="display: inline-flex; margin-right: 0px;" @click="reload()">reload</button>
     </span>
 
-    <textarea style="height: 4.25rem;" v-model="execute"  v-if="isStation">{{execute}}</textarea>
+    <textarea style="height: 4.25rem;" v-model="execute" v-if="isStation">{{execute}}</textarea>
   </div>
 
   <div style="width: calc(100% + 10px); height: 60%" id="terminal"></div>
@@ -67,7 +67,6 @@
     var lastData = null
 
     const DEFAULT_SERVER = 'http://localhost:5000/pty'
-
 
     function fitToScreen() {
       if (fit && terminal) {
@@ -119,6 +118,17 @@
         reload() {
           if (socket) socket.close()
           this.connectStation()
+        },
+
+        execute(code) {
+          let program = this.execute
+
+          if (!program.endsWith("\n")) {
+            program += "\n"
+          }
+
+          if (Edrys.module)
+            Edrys.sendMessage("input_" + Edrys.role, program.replace('$CODE', btoa(code)))
         },
 
         initTerminal() {
