@@ -53,6 +53,8 @@ RUN apt-get install -y clojure
 
 RUN apt-get install -y lua5.3
 
+RUN apt-get install nodejs
+
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
 RUN arduino-cli upgrade
 RUN arduino-cli core install arduino:avr
@@ -71,8 +73,8 @@ RUN groupadd -g ${gid} ${group}
 RUN useradd -u ${uid} -g ${group} -s /bin/sh -m ${user} # <--- the '-m' create a user home directory
 RUN usermod -a -G dialout ${user}
 
-COPY ./assets/.zshrc /home/appuser/.zshrc
-COPY ./assets/.oh-my-zsh /home/appuser/.oh-my-zsh
+COPY assets/.zshrc /home/appuser/.zshrc
+COPY assets/.oh-my-zsh /home/appuser/.oh-my-zsh
 
 # Switch to user we must not set group to make the configuration done above apply
 # !! if ${user} is not setup correctly the next line might result in group being root !!

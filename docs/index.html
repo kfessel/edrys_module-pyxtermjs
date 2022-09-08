@@ -35,11 +35,11 @@
       <label>
         teacher: <input type="checkbox" :value="enable.teacher" @click="toggleTeacher">
       </label>
-      <input type="input" style="display: inline-flex;" :value="server">
-      <button style="display: inline-flex;" @click="reload()">reload</button>
+      <input type="input" style="display: inline-flex;" v-model="server">
+      <button style="display: inline-flex; margin-right: 0px;" @click="reload()">reload</button>
     </span>
 
-    <textarea style="height: 4.25rem;" v-model="execute">{{execute}}</textarea>
+    <textarea style="height: 4.25rem;" v-model="execute"  v-if="isStation">{{execute}}</textarea>
   </div>
 
   <div style="width: calc(100% + 10px); height: 60%" id="terminal"></div>
@@ -100,8 +100,8 @@
           isStation: false,
           connected: false,
           enable: {
-            student: false,
-            teacher: false
+            student: true,
+            teacher: true
           },
           server: DEFAULT_SERVER,
           execute: 'echo $CODE | base64 --decode',
@@ -117,7 +117,8 @@
         },
 
         reload() {
-          alert("reconnect")
+          if (socket) socket.close()
+          this.connectStation()
         },
 
         initTerminal() {
@@ -142,7 +143,7 @@
           terminal.writeln("https://github.com/cs01/pyxterm.js");
 
           terminal.onData((data) => {
-            console.log("key pressed in browser:", data);
+            //console.log("key pressed in browser:", data);
             if (socket) {
               socket.emit("pty-input", {
                 input: data
@@ -164,7 +165,7 @@
             subject,
             body
           }) => {
-            // console.log("Got new message: ", from, subject, body)
+            //console.log("Got new message: ", from, subject, body)
             switch (subject) {
               case "pty-output": {
                 terminal.write(body);
@@ -179,14 +180,15 @@
                 fitToScreen()
                 break
               }
-              default: {
+              /*default: {
                 console.warn("unknown message (user) => ", from, subject, body)
-              }
+              }*/
             }
           });
         },
 
         connectStation() {
+
           socket = io.connect(this.server);
           const self = this
 
@@ -217,7 +219,7 @@
               subject,
               body
             }) => {
-              // console.log("Got new message: ", from, subject, body)
+              console.log("Got new message: ", from, subject, body)
               switch (subject) {
                 case "input_teacher": {
                   if (self.enable.teacher) {
@@ -259,7 +261,7 @@
                 body,
                 module
               }) => {
-                // console.log("Got new message: ", from, subject, body, module,  Edrys.module.stationConfig.execute)
+                //console.log("Got new message: ", from, subject, body, module,  Edrys.module.stationConfig.execute)
 
                 if (subject === Edrys.module.stationConfig.execute) {
                   self.execute(body)
@@ -285,11 +287,11 @@
       }
     });
 
-    setTimeout(function() {
+    setTimeout(function () {
       if (!Edrys.module) {
         console.warn("connect")
         app.connectStation()
-        app.isStation = true
+        //app.isStation = true
       }
     }, 5000)
   </script>
