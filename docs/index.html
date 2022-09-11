@@ -328,17 +328,21 @@
                 console.log("Got new message: ", from, subject, body, module, Edrys.module.stationConfig.execute)
 
                 if (subject === Edrys.module.stationConfig.execute) {
-                  
-                  
+                  self.execute(body)
+                } else if (subject === Edrys.module.stationConfig.store) {
+                  try {
+                    body = JSON.parse(body)
 
-                  /*self.store({
-                    "file1.txt": "bla bla",
-                    "file2.txt": "bbbasdfalksfüäölasfdküspküaspkfd"
-                  })
-                  */
+                    self.store(body)
+                    self.execute('')
+                  } catch (error) {
+                    console.warn(error)
+                  }
 
-                  self.execute('')
+
                 }
+
+
               }, promiscuous = true);
           }
         }
