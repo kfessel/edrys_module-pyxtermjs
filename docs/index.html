@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -23,9 +25,9 @@
     <span style="font-size: 1.4em">pyxterm.js</span>
     <span style="font-size: small; margin-left: 2rem;">
       status:
-      <span v-if="status == -1" style="background-color: #ff8383;">disconnected</span>
-      <span v-if="status ==  0">connecting ...</span>
-      <span v-if="status ==  1" style="background-color: lightgreen;">connected</span>
+      <span v-if="status === false" style="background-color: #ff8383;">disconnected</span>
+      <span v-if="status === null">connecting ...</span>
+      <span v-if="status === true" style="background-color: lightgreen;">connected</span>
     </span>
 
     <span style="font-size: small; display: flex; align-items: center; float: right;" v-if="isStation">
@@ -39,7 +41,7 @@
       <button style="display: inline-flex; margin-right: 0px;" @click="reload()">reload</button>
     </span>
 
-    <textarea style="height: 4.25rem;" v-model="execute" v-if="isStation">{{execute}}</textarea>
+    <textarea style="height: 4.25rem;" v-model="script" v-if="isStation">{{script}}</textarea>
   </div>
 
   <div style="width: calc(100% + 10px); height: 60%" id="terminal"></div>
@@ -57,6 +59,24 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 
   <script>
+    var toUtf8 = function (text) {
+      var surrogate = encodeURIComponent(text);
+      var result = '';
+      for (var i = 0; i < surrogate.length;) {
+        var character = surrogate[i];
+        i += 1;
+        if (character == '%') {
+          var hex = surrogate.substring(i, i += 2);
+          if (hex) {
+            result += String.fromCharCode(parseInt(hex, 16));
+          }
+        } else {
+          result += character;
+        }
+      }
+      return result;
+    };
+
     const {
       createApp
     } = Vue
@@ -95,15 +115,15 @@
     const app = createApp({
       data() {
         return {
-          status: 0,
+          status: null,
           isStation: false,
           connected: false,
           enable: {
-            student: true,
-            teacher: true
+            student: false,
+            teacher: false
           },
           server: DEFAULT_SERVER,
-          execute: 'echo $CODE | base64 --decode',
+          script: 'echo $CODE | base64 --decode',
         }
       },
       methods: {
@@ -121,14 +141,33 @@
         },
 
         execute(code) {
-          let program = this.execute
+          let program = this.script
 
           if (!program.endsWith("\n")) {
             program += "\n"
           }
 
           if (Edrys.module)
-            Edrys.sendMessage("input_" + Edrys.role, program.replace('$CODE', btoa(code)))
+            Edrys.sendMessage("input_" + Edrys.role, program.replace('$CODE', btoa(toUtf8(code))))
+        },
+
+        store(file) {
+          let command = ""
+
+          for (const name in file) {
+            let content = file[name]
+
+            if (!content.endsWith('\n')) {
+              content += '\n'
+            }
+
+            command += `echo ${btoa(toUtf8(content))} | base64 --decode > ${toUtf8(name)}\n`
+          }
+
+          command += "clear\n"
+
+          if (Edrys.module)
+            Edrys.sendMessage("input_" + Edrys.role, command)
         },
 
         initTerminal() {
@@ -147,7 +186,7 @@
           terminal.open(document.getElementById("terminal"));
           fit.fit();
           terminal.resize(12, 50);
-          console.log(`size: ${terminal.cols} columns, ${terminal.rows} rows`);
+          // console.log(`size: ${terminal.cols} columns, ${terminal.rows} rows`);
           fit.fit();
           terminal.writeln("Welcome to pyxterm.js!");
           terminal.writeln("https://github.com/cs01/pyxterm.js");
@@ -167,25 +206,31 @@
 
           const wait_ms = 50;
           window.onresize = debounce(fitToScreen, wait_ms);
+
+
         },
 
         connectUser() {
+          const self = this
+
           Edrys.onMessage(({
             from,
             subject,
             body
           }) => {
-            //console.log("Got new message: ", from, subject, body)
+            // console.log("Got new message: ", subject, body)
             switch (subject) {
               case "pty-output": {
                 terminal.write(body);
                 break
               }
               case "connect": {
-                if (body === "1") {
-                  self.status = 1
+                if (body === "true") {
+                  self.status = true
+                } else if (body === "false" ){
+                  self.status = false
                 } else {
-                  self.status = -1
+                  self.status = null
                 }
                 fitToScreen()
                 break
@@ -203,7 +248,7 @@
           const self = this
 
           socket.on("pty-output", function (data) {
-            console.log("new output received from server:", data.output);
+            // console.log("new output received from server:", data.output);
             terminal.write(data.output);
             if (Edrys.module)
               Edrys.sendMessage("pty-output", data.output)
@@ -212,13 +257,20 @@
 
           socket.on("connect", () => {
             fitToScreen();
-            self.status = 1
-            if (Edrys.module)
+            self.status = true
+            if (Edrys.module) {
               Edrys.sendMessage("connect", "true")
+            }
+
+            // simply an starting enter to receive outputs
+            socket.emit("pty-input", {
+              input: '\n'
+            })
+
           });
 
           socket.on("disconnect", () => {
-            self.status = -1
+            self.status = false
             if (Edrys.module)
               Edrys.sendMessage("connect", "false")
           });
@@ -229,7 +281,7 @@
               subject,
               body
             }) => {
-              console.log("Got new message: ", from, subject, body)
+              // console.log("Got new message: ", from, subject, body)
               switch (subject) {
                 case "input_teacher": {
                   if (self.enable.teacher) {
@@ -271,10 +323,19 @@
                 body,
                 module
               }) => {
-                //console.log("Got new message: ", from, subject, body, module,  Edrys.module.stationConfig.execute)
+                console.log("Got new message: ", from, subject, body, module, Edrys.module.stationConfig.execute)
 
                 if (subject === Edrys.module.stationConfig.execute) {
-                  self.execute(body)
+                  
+                  
+
+                  /*self.store({
+                    "file1.txt": "bla bla",
+                    "file2.txt": "bbbasdfalksfüäölasfdküspküaspkfd"
+                  })
+                  */
+
+                  self.execute('')
                 }
               }, promiscuous = true);
           }
@@ -294,6 +355,7 @@
         Edrys.sendMessage("join", null)
       } else {
         app.connectUser()
+        Edrys.sendMessage("join", null)
       }
     });
 
