@@ -89,6 +89,7 @@
     var lastData = null
 
     const DEFAULT_SERVER = 'http://localhost:5000/pty'
+    const DEFAULT_SCRIPT = 'echo $CODE | base64 --decode'
 
     function fitToScreen() {
       if (fit && terminal) {
@@ -125,7 +126,7 @@
             teacher: false
           },
           server: DEFAULT_SERVER,
-          script: 'echo $CODE | base64 --decode',
+          script: DEFAULT_SCRIPT,
         }
       },
       methods: {
@@ -357,6 +358,7 @@
       if (Edrys.role === "station") {
         app.isStation = true
         app.server = Edrys.module.stationConfig.server || DEFAULT_SERVER
+        app.script = Edrys.module.stationConfig.script || DEFAULT_SCRIPT
         app.connectStation()
         Edrys.sendMessage("join", null)
       } else {

@@ -30,7 +30,9 @@ You may optionally specify any of the following station-only settings:
 
 ``` json
 { "server": "http://localhost:5000/pty"
-, "execute": "pty-execute"
+, "execute": "execute"
+, "store": "execute"
+, "script": "echo $CODE | base64 --decode" 
 }
 ```
 
@@ -40,6 +42,7 @@ By default students and teachers cannot directly access the terminal, they will 
 You will have to grant access via the checkboxes, which are only visible on the station.
 
 ![station-control](./pyxterm.png)
+
 
 ## API
 
