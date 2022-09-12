@@ -22,7 +22,7 @@
 
 </head>
 
-<body>
+<body style="max-width: 100%; padding-left: 0px">
   <div id="app">
     <span style="font-size: 1.4em">pyxterm.js</span>
     <span style="font-size: small; margin-left: 2rem;">
@@ -46,7 +46,7 @@
     <textarea style="height: 4.25rem;" v-model="script" v-if="isStation">{{script}}</textarea>
   </div>
 
-  <div style="width: calc(100% + 10px); height: 60%" id="terminal"></div>
+  <div style="width: calc(100% + 10px); height: 380px" id="terminal"></div>
 
   <p style="text-align: right; font-size: small">
     built by <a href="https://chadsmith.dev">Chad Smith</a>
@@ -99,7 +99,7 @@
           rows: terminal.rows
         };
 
-        console.log("sending new dimensions to server's pty", dims);
+        // console.log("sending new dimensions to server's pty", dims);
         if (socket) {
           socket.emit("resize", dims);
         }
@@ -167,7 +167,7 @@
             command += `echo ${btoa(toUtf8(content))} | base64 --decode > ${toUtf8(name)}\n`
           }
 
-          command += "clear\n"
+          //command += "clear\n"
 
           if (Edrys.module)
             Edrys.sendMessage("input_" + Edrys.role, command)
@@ -313,9 +313,9 @@
                   Edrys.sendMessage("pty-output", lastData)
                   break
                 }
-                default: {
+                /*default: {
                   console.warn("unknown message (station) => ", from, subject, body)
-                }
+                }*/
               }
             });
 
@@ -326,24 +326,22 @@
                 body,
                 module
               }) => {
-                console.log("Got new message: ", from, subject, body, module, Edrys.module.stationConfig.execute)
+                //console.log("Got new message: ", from, subject, body, module, Edrys.module.stationConfig.execute)
 
                 if (subject === Edrys.module.stationConfig.execute) {
-                  self.execute(body)
-                } else if (subject === Edrys.module.stationConfig.store) {
                   try {
-                    body = JSON.parse(body)
+                    let data = JSON.parse(body)
 
-                    self.store(body)
-                    self.execute('')
-                  } catch (error) {
-                    console.warn(error)
-                  }
+                    if (data.file) {
+                      self.store(data.file)
+                      self.execute('')
+                      
+                      return
+                    }
+                  } catch (e) {}
 
-
+                  self.execute(body)
                 }
-
-
               }, promiscuous = true);
           }
         }

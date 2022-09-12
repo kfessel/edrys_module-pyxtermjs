@@ -31,7 +31,6 @@ You may optionally specify any of the following station-only settings:
 ``` json
 { "server": "http://localhost:5000/pty"
 , "execute": "execute"
-, "store": "execute"
 , "script": "echo $CODE | base64 --decode" 
 }
 ```
