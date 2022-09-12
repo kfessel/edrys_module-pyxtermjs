@@ -30,8 +30,8 @@ RUN groupadd -g ${gid} ${group}
 RUN useradd -u ${uid} -g ${group} -s /bin/sh -m ${user} # <--- the '-m' create a user home directory
 RUN usermod -a -G dialout ${user}
 
-COPY asset/.zshrc /home/appuser/.zshrc
-COPY asset/.oh-my-zsh /home/appuser/.oh-my-zsh
+COPY _assets/.zshrc /home/appuser/.zshrc
+COPY _assets/.oh-my-zsh /home/appuser/.oh-my-zsh
 
 # Switch to user we must not set group to make the configuration done above apply
 # !! if ${user} is not setup correctly the next line might result in group being root !!
