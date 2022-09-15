@@ -34,10 +34,10 @@
 
     <span style="font-size: small; display: flex; align-items: center; float: right;" v-if="isStation">
       <label>
-        student: <input type="checkbox" :value="enable.student" @click="toggleStudent">
+        student: <input type="checkbox" v-model="enable.student">
       </label>
       <label>
-        teacher: <input type="checkbox" :value="enable.teacher" @click="toggleTeacher">
+        teacher: <input type="checkbox" v-model="enable.teacher">
       </label>
       <input type="input" style="display: inline-flex;" v-model="server">
       <button style="display: inline-flex; margin-right: 0px;" @click="reload()">reload</button>
@@ -130,14 +130,6 @@
         }
       },
       methods: {
-        toggleStudent() {
-          this.enable.student = !this.enable.student
-        },
-
-        toggleTeacher() {
-          this.enable.teacher = !this.enable.teacher
-        },
-
         reload() {
           if (socket) socket.close()
           this.connectStation()
