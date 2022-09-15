@@ -357,6 +357,9 @@
         app.isStation = true
         app.server = Edrys.module.stationConfig.server || DEFAULT_SERVER
         app.script = Edrys.module.stationConfig.script || DEFAULT_SCRIPT
+        app.enable.student = Edrys.module.stationConfig.enable?.student || false
+        app.enable.teacher = Edrys.module.stationConfig.enable?.teacher || false
+
         app.connectStation()
         Edrys.sendMessage("join", null)
       } else {

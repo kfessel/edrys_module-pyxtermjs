@@ -31,7 +31,11 @@ You may optionally specify any of the following station-only settings:
 ``` json
 { "server": "http://localhost:5000/pty"
 , "execute": "execute"
-, "script": "echo $CODE | base64 --decode" 
+, "script": "echo $CODE | base64 --decode"
+, "enable": {
+  "teacher": true,
+  "student": true
+}
 }
 ```
 
