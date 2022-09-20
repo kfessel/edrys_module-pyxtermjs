@@ -12,9 +12,8 @@ RUN apt-get install -y \
     vim \
     zsh
 
+#prepare arduino-cli for container (install as root)
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-RUN arduino-cli upgrade
-RUN arduino-cli core install arduino:avr
 
 COPY . /var/www
 WORKDIR "/var/www"
@@ -36,6 +35,10 @@ COPY _assets/oh-my-zsh /home/appuser/.oh-my-zsh
 # Switch to user we must not set group to make the configuration done above apply
 # !! if ${user} is not setup correctly the next line might result in group being root !!
 USER ${user}
+
+#prepare our arduino env (as user)
+RUN arduino-cli upgrade
+RUN arduino-cli core install arduino:avr
 
 EXPOSE 5000
 
