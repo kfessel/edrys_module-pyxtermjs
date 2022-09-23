@@ -143,7 +143,7 @@
           }
 
           if (Edrys.module)
-            Edrys.sendMessage("input_" + Edrys.role, program.replace('$CODE', btoa(toUtf8(code))))
+            Edrys.sendMessage("pty-input", JSON.stringify(program.replace('$CODE', btoa(toUtf8(code)))))
         },
 
         store(file) {
@@ -162,7 +162,7 @@
           //command += "clear\n"
 
           if (Edrys.module)
-            Edrys.sendMessage("input_" + Edrys.role, command)
+            Edrys.sendMessage("pty-input", JSON.stringify(command))
         },
 
         initTerminal() {
@@ -194,7 +194,7 @@
               });
             } else if (Edrys.module) {
               // send inputData from subRoles
-              Edrys.sendMessage("input_" + Edrys.role, data)
+              Edrys.sendMessage("pty-input", JSON.stringify(data))
             }
           });
 
@@ -216,7 +216,7 @@
             // console.log("Got new message: ", subject, body)
             switch (subject) {
               case "pty-output": {
-                terminal.write(body);
+                terminal.write(JSON.parse(body));
                 break
               }
               case "connect": {
@@ -246,7 +246,7 @@
             // console.log("new output received from server:", data.output);
             terminal.write(data.output);
             if (Edrys.module)
-              Edrys.sendMessage("pty-output", data.output)
+              Edrys.sendMessage("pty-output", JSON.stringify(data.output))
             lastData = data.output
           });
 
@@ -277,32 +277,21 @@
               body
             }) => {
               // console.log("Got new message: ", from, subject, body)
+              if(Edrys.liveClass.users[from]){
+                  sender_role = Edrys.liveClass.users[from].role;
+              }
               switch (subject) {
-                case "input_teacher": {
-                  if (self.enable.teacher) {
+                case "pty-input": {
+                  if ( self.enable[sender_role]) {
                     socket.emit("pty-input", {
-                      input: body
+                      input: JSON.parse(body)
                     })
                   }
-                  break
-                }
-                case "input_student": {
-                  if (self.enable.student) {
-                    socket.emit("pty-input", {
-                      input: body
-                    })
-                  }
-                  break
-                }
-                case "input_station": {
-                  socket.emit("pty-input", {
-                    input: body
-                  })
                   break
                 }
                 case "join": {
                   Edrys.sendMessage("connect", JSON.stringify(self.status))
-                  Edrys.sendMessage("pty-output", lastData)
+                  Edrys.sendMessage("pty-output", JSON.stringify(lastData))
                   break
                 }
                 /*default: {
@@ -310,7 +299,6 @@
                 }*/
               }
             });
-
             Edrys.onMessage(
               ({
                 from,
